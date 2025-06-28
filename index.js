@@ -14,7 +14,7 @@ app.get("/", (req, res) => {
 });
 
 let onlineDevices = {};
-const timeoutMs = 30000; // 30 seconds
+const timeoutMs = 60000; // 30 seconds
 
 
 app.post("/ping", (req, res) => {
