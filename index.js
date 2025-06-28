@@ -28,20 +28,24 @@ app.post("/ping", (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/device-status", (req, res) => {
+app.get('/device-status', (req, res) => {
   const { device_id } = req.query;
 
   if (!device_id) {
-    return res.status(400).json({ error: "device_id is required" });
+    return res.status(400).json({ error: 'device_id is required' });
   }
 
   const lastPing = onlineDevices[device_id];
-  const isOnline = lastPing && Date.now() - lastPing <= timeoutMs;
+  const isOnline = lastPing && (Date.now() - lastPing <= timeoutMs);
+
+  const utc7OffsetMs = 7 * 60 * 60 * 1000; // 7 ชั่วโมงในมิลลิวินาที
 
   res.json({
     device_id,
     online: !!isOnline,
-    last_ping: lastPing ? new Date(lastPing).toISOString() : null,
+    last_ping: lastPing
+      ? new Date(lastPing + utc7OffsetMs).toISOString()
+      : null,
   });
 });
 
