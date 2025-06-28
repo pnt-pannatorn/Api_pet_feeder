@@ -14,28 +14,29 @@ app.get("/", (req, res) => {
 });
 
 let onlineDevices = {};
-const timeoutDuration = 30000; // 30 seconds
+const timeoutMs = 30000; // 30 seconds
 
-app.post('/ping', (req, res) => {
+
+app.post("/ping", (req, res) => {
   const { device_id } = req.body;
 
   if (!device_id) {
-    return res.status(400).json({ error: 'device_id is required' });
+    return res.status(400).json({ error: "device_id is required" });
   }
 
   onlineDevices[device_id] = Date.now();
   res.json({ ok: true });
 });
 
-app.get('/device-status', (req, res) => {
+app.get("/device-status", (req, res) => {
   const { device_id } = req.query;
 
   if (!device_id) {
-    return res.status(400).json({ error: 'device_id is required' });
+    return res.status(400).json({ error: "device_id is required" });
   }
 
   const lastPing = onlineDevices[device_id];
-  const isOnline = lastPing && (Date.now() - lastPing <= timeoutMs);
+  const isOnline = lastPing && Date.now() - lastPing <= timeoutMs;
 
   res.json({
     device_id,
@@ -43,7 +44,6 @@ app.get('/device-status', (req, res) => {
     last_ping: lastPing ? new Date(lastPing).toISOString() : null,
   });
 });
-
 
 app.listen(process.env.PORT || 3000, () => {
   console.log("CORS-enabled web server listening on port 3000");
