@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
 let onlineDevices = {};
 const timeoutMs = 60000; // 30 seconds
 
-
+//check if the device is online
 app.post("/ping", (req, res) => {
   const { device_id } = req.body;
 
@@ -47,6 +47,36 @@ app.get('/device-status', (req, res) => {
       ? new Date(lastPing + utc7OffsetMs).toISOString()
       : null,
   });
+});
+
+//check for command
+let latestCommand = null;  // ตัวแปรไว้เก็บคำสั่งล่าสุด
+
+//สั่งจากเว็บหรือ LINE → ส่งคำสั่งให้ ESP
+app.post("/command", (req, res) => {
+  const { device_id, action } = req.body;
+  if (!device_id || !action) {
+    return res.status(400).json({ error: "device_id and action are required" });
+  }
+
+  latestCommand = { device_id, action };
+  res.json({ status: "command saved" });
+});
+
+//ESP ดึงคำสั่งล่าสุด
+app.get("/get-command", (req, res) => {
+  res.json(latestCommand || {});
+});
+
+//ESP ส่งกลับว่าได้รับแล้ว → เคลียร์คำสั่ง
+app.post("/acknowledge", (req, res) => {
+  const { device_id } = req.body;
+  if (latestCommand && latestCommand.device_id === device_id) {
+    latestCommand = null;
+    res.json({ status: "acknowledged" });
+  } else {
+    res.json({ status: "no command to acknowledge" });
+  }
 });
 
 app.listen(process.env.PORT || 3000, () => {
