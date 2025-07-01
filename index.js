@@ -112,7 +112,7 @@ app.get("/feeding-schedules", (req, res) => {
         (repeat_type = 'daily')
         OR (repeat_type = 'once' AND date = CURDATE())
       )
-      AND TIME_FORMAT(time, '%H:%i') = TIME_FORMAT(NOW(), '%H:%i')
+      AND ABS(TIMESTAMPDIFF(MINUTE, time, NOW()))<= 2
   `;
 
   connection.query(sql, [device_id], (err, results) => {
