@@ -106,13 +106,15 @@ app.get("/feeding-schedules", (req, res) => {
     return res.status(400).json({ error: "device_id is required" });
 
   const sql = `
-    SELECT * FROM feeding_schedules
+    SELECT *,
+      TIME_FORMAT(ADDTIME(time, '07:00:00'), '%H:%i') AS time_local
+    FROM feeding_schedules
     WHERE devices_id = ?
       AND (
-        (repeat_type = 'daily')
+        repeat_type = 'daily'
         OR (repeat_type = 'once' AND date = CURDATE())
       )
-      AND ABS(TIMESTAMPDIFF(MINUTE, time, NOW()))<= 2
+      AND ABS(TIMESTAMPDIFF(MINUTE, ADDTIME(time, '07:00:00'), ADDTIME(NOW(), '07:00:00'))) <= 2
   `;
 
   connection.query(sql, [device_id], (err, results) => {
