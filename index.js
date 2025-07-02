@@ -81,17 +81,17 @@ app.post("/acknowledge", (req, res) => {
 
 //POST /feeding-schedules → เพิ่มตารางเวลา
 app.post("/feeding-schedules", (req, res) => {
-  const { devices_id, repeat_type, date, time, amount } = req.body;
+  const { devices_id, repeat_type, date, time, amount,udi } = req.body;
 
-  if (!devices_id || !repeat_type || !time || !amount) {
+  if (!devices_id || !repeat_type || !time || !amount || !udi) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
   const sql = `
-    INSERT INTO feeding_schedules (devices_id, repeat_type, date, time, amount)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO feeding_schedules (devices_id, repeat_type, date, time, amount,udi)
+    VALUES (?, ?, ?, ?, ?, ?)
   `;
-  const values = [devices_id, repeat_type, date || null, time, amount];
+  const values = [devices_id, repeat_type, date || null, time, amount,udi];
 
   connection.query(sql, values, (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
