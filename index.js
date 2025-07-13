@@ -74,34 +74,66 @@ app.get("/device-summary", (req, res) => {
 });
 
 //check for command
-let latestCommand = null; // ตัวแปรไว้เก็บคำสั่งล่าสุด
+// let latestCommand = null; // ตัวแปรไว้เก็บคำสั่งล่าสุด
+let latestCommand = {};
 
 //สั่งจากเว็บหรือ LINE → ส่งคำสั่งให้ ESP
+// app.post("/command", (req, res) => {
+//   const { device_id, action } = req.body;
+//   if (!device_id || !action) {
+//     return res.status(400).json({ error: "device_id and action are required" });
+//   }
+
+//   latestCommand = { device_id, action };
+//   res.json({ status: "command saved" });
+// });
+// //ESP ดึงคำสั่งล่าสุด
+// app.get("/get-command", (req, res) => {
+//   res.json(latestCommand || {});
+// });
+// //ESP ส่งกลับว่าได้รับแล้ว → เคลียร์คำสั่ง
+// app.post("/acknowledge", (req, res) => {
+//   const { device_id } = req.body;
+//   if (latestCommand && latestCommand.device_id === device_id) {
+//     latestCommand = null;
+//     res.json({ status: "acknowledged" });
+//   } else {
+//     res.json({ status: "no command to acknowledge" });
+//   }
+// });
+// สั่งงาน
 app.post("/command", (req, res) => {
   const { device_id, action } = req.body;
   if (!device_id || !action) {
     return res.status(400).json({ error: "device_id and action are required" });
   }
 
-  latestCommand = { device_id, action };
+  latestCommand[device_id] = action;
   res.json({ status: "command saved" });
 });
 
-//ESP ดึงคำสั่งล่าสุด
+// ESP ดึงคำสั่งล่าสุด
 app.get("/get-command", (req, res) => {
-  res.json(latestCommand || {});
+  const { device_id } = req.query;
+  if (!device_id) {
+    return res.status(400).json({ error: "device_id is required" });
+  }
+
+  const action = latestCommand[device_id] || null;
+  res.json({ device_id, action });
 });
 
-//ESP ส่งกลับว่าได้รับแล้ว → เคลียร์คำสั่ง
+// เคลียร์คำสั่ง
 app.post("/acknowledge", (req, res) => {
   const { device_id } = req.body;
-  if (latestCommand && latestCommand.device_id === device_id) {
-    latestCommand = null;
+  if (latestCommand[device_id]) {
+    delete latestCommand[device_id];  // ✅ ลบเฉพาะของอุปกรณ์นั้น
     res.json({ status: "acknowledged" });
   } else {
     res.json({ status: "no command to acknowledge" });
   }
 });
+
 
 //POST /feeding-schedules → เพิ่มตารางเวลา
 app.post("/feeding-schedules", (req, res) => {
