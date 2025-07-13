@@ -49,6 +49,30 @@ app.get("/device-status", (req, res) => {
   });
 });
 
+app.get("/device-summary", (req, res) => {
+  const { line_uid } = req.query;
+
+  if (!line_uid) return res.status(400).json({ error: "line_uid is required" });
+
+  const sql = "SELECT devices_id FROM Devices WHERE line_uid = ?";
+
+  connection.query(sql, [line_uid], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const total = results.length;
+    const now = Date.now();
+    const timeoutMs = 60000;
+
+    // ตรวจสอบว่าออนไลน์กี่เครื่อง
+    const online = results.filter((row) => {
+      const lastPing = onlineDevices[row.devices_id];
+      return lastPing && now - lastPing <= timeoutMs;
+    }).length;
+
+    res.json({ total_devices: total, online_devices: online });
+  });
+});
+
 //check for command
 let latestCommand = null; // ตัวแปรไว้เก็บคำสั่งล่าสุด
 
