@@ -49,6 +49,39 @@ app.get("/device-status", (req, res) => {
   });
 });
 
+//device status by line_uid
+app.get("/devices-status", (req, res) => {
+  const { line_uid } = req.query;
+  if (!line_uid) {
+    return res.status(400).json({ error: "line_uid is required" });
+  }
+
+  const sql = "SELECT devices_id FROM devices WHERE line_uid = ?";
+  connection.query(sql, [line_uid], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const allDevices = results.map((r) => r.devices_id);
+    const online = [];
+    const offline = [];
+
+    allDevices.forEach((deviceId) => {
+      const lastPing = onlineDevices[deviceId];
+      const isOnline = lastPing && Date.now() - lastPing <= timeoutMs;
+      if (isOnline) {
+        online.push(deviceId);
+      } else {
+        offline.push(deviceId);
+      }
+    });
+
+    res.json({
+      allDevices,
+      onlineDevices: online,
+      offlineDevices: offline,
+    });
+  });
+});
+
 app.get("/device-summary", (req, res) => {
   const { line_uid } = req.query;
 
