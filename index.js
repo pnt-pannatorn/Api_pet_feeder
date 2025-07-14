@@ -208,7 +208,79 @@ app.post("/acknowledge", (req, res) => {
 });
 
 //POST /feeding-schedules → เพิ่มตารางเวลา
+// app.post("/feeding-schedules", (req, res) => {
+//   const { devices_id, repeat_type, date, time, amount, uid } = req.body;
+
+//   if (!devices_id || !repeat_type || !time || !amount || !uid) {
+//     return res.status(400).json({ error: "Missing required fields" });
+//   }
+
+//   const sql = `
+//     INSERT INTO feeding_schedules (devices_id, repeat_type, date, time, amount, uid)
+//     VALUES (?, ?, ?, ?, ?, ?)
+//   `;
+//   const values = [devices_id, repeat_type, date || null, time, amount, uid];
+
+//   connection.query(sql, values, (err, results) => {
+//     if (err) return res.status(500).json({ error: err.message });
+//     res.json({ id: results.insertId, message: "Schedule added" });
+//   });
+// });
 app.post("/feeding-schedules", (req, res) => {
+  const { devices_id, repeat_type, date, time, amount, uid } = req.body;
+
+  if (!devices_id || !repeat_type || !time || !amount || !uid) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  // รวม date และ time เป็น string datetime
+  // กรณี repeat_type เป็น once ต้องใช้ date + time, daily อาจมีแค่ time
+  let datetimeStr;
+  if (repeat_type === "once" && date) {
+    datetimeStr = `${date}T${time}:00`; // เช่น "2023-07-14T15:30:00"
+  } else {
+    // daily แบบนี้ถือเวลาเป็น time เฉย ๆ
+    datetimeStr = `1970-01-01T${time}:00`; // เวลาเท่านั้น กำหนดวันเป็น dummy
+  }
+
+  // แปลงเป็น Date object แล้วปรับเวลาเป็น UTC+7 (Bangkok)
+  const dateObj = new Date(datetimeStr);
+  // เพิ่มเวลา 7 ชั่วโมง (7 * 60 * 60 * 1000 ms)
+  const dateUTC7 = new Date(dateObj.getTime() + 7 * 60 * 60 * 1000);
+
+  // สร้าง string วันที่และเวลาใหม่ในรูปแบบ MySQL 'YYYY-MM-DD' และ 'HH:mm:ss'
+  const pad = (n) => n.toString().padStart(2, "0");
+  const newDate = `${dateUTC7.getUTCFullYear()}-${pad(
+    dateUTC7.getUTCMonth() + 1
+  )}-${pad(dateUTC7.getUTCDate())}`;
+  const newTime = `${pad(dateUTC7.getUTCHours())}:${pad(
+    dateUTC7.getUTCMinutes()
+  )}:00`;
+
+  const sql = `
+    INSERT INTO feeding_schedules (devices_id, repeat_type, date, time, amount, uid)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+
+  // เก็บวันกับเวลาที่ปรับเป็น UTC+7 ลงฐานข้อมูล
+  const values = [
+    devices_id,
+    repeat_type,
+    repeat_type === "once" ? newDate : null,
+    newTime,
+    amount,
+    uid,
+  ];
+
+  connection.query(sql, values, (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ id: results.insertId, message: "Schedule added" });
+  });
+});
+
+//===================================================================
+//for line
+app.post("/feeding-schedules-line", (req, res) => {
   const { devices_id, repeat_type, date, time, amount, uid } = req.body;
 
   if (!devices_id || !repeat_type || !time || !amount || !uid) {
@@ -235,14 +307,14 @@ app.get("/feeding-schedules", (req, res) => {
 
   const sql = `
     SELECT id, devices_id, repeat_type, date, amount,
-      TIME_FORMAT(ADDTIME(time, '07:00:00'), '%H:%i') AS time
+      TIME_FORMAT(time, '%H:%i') AS time
     FROM feeding_schedules
     WHERE devices_id = ?
       AND (
         repeat_type = 'daily'
         OR (repeat_type = 'once' AND date = CURDATE())
       )
-      AND ABS(TIMESTAMPDIFF(MINUTE, ADDTIME(time, '07:00:00'), ADDTIME(NOW(), '07:00:00'))) <= 1
+      AND ABS(TIMESTAMPDIFF(MINUTE, time, NOW())) <= 1
   `;
 
   connection.query(sql, [device_id], (err, results) => {
