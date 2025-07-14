@@ -82,6 +82,46 @@ app.get("/devices-status", (req, res) => {
   });
 });
 
+app.get("/devices-status-type", (req, res) => {
+  const { line_uid, type } = req.query;
+  if (!line_uid) {
+    return res.status(400).json({ error: "line_uid is required" });
+  }
+
+  // ถ้ามี type ก็เพิ่ม filter ใน SQL
+  let sql = "SELECT devices_id FROM devices WHERE line_uid = ?";
+  const params = [line_uid];
+
+  if (type) {
+    sql += " AND type = ?";
+    params.push(type);
+  }
+
+  connection.query(sql, params, (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const allDevices = results.map((r) => r.devices_id);
+    const online = [];
+    const offline = [];
+
+    allDevices.forEach((deviceId) => {
+      const lastPing = onlineDevices[deviceId];
+      const isOnline = lastPing && Date.now() - lastPing <= timeoutMs;
+      if (isOnline) {
+        online.push(deviceId);
+      } else {
+        offline.push(deviceId);
+      }
+    });
+
+    res.json({
+      allDevices,
+      onlineDevices: online,
+      offlineDevices: offline,
+    });
+  });
+});
+
 app.get("/device-summary", (req, res) => {
   const { line_uid } = req.query;
 
@@ -160,13 +200,12 @@ app.get("/get-command", (req, res) => {
 app.post("/acknowledge", (req, res) => {
   const { device_id } = req.body;
   if (latestCommand[device_id]) {
-    delete latestCommand[device_id];  // ✅ ลบเฉพาะของอุปกรณ์นั้น
+    delete latestCommand[device_id]; // ✅ ลบเฉพาะของอุปกรณ์นั้น
     res.json({ status: "acknowledged" });
   } else {
     res.json({ status: "no command to acknowledge" });
   }
 });
-
 
 //POST /feeding-schedules → เพิ่มตารางเวลา
 app.post("/feeding-schedules", (req, res) => {
