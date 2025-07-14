@@ -305,23 +305,30 @@ app.get("/feeding-schedules", (req, res) => {
   if (!device_id)
     return res.status(400).json({ error: "device_id is required" });
 
-  const sql = `
-    SELECT id, devices_id, repeat_type, date, amount,
-      TIME_FORMAT(time, '%H:%i') AS time
-    FROM feeding_schedules
-    WHERE devices_id = ?
-      AND (
-        repeat_type = 'daily'
-        OR (repeat_type = 'once' AND date = CURDATE())
-      )
-      AND ABS(TIMESTAMPDIFF(MINUTE, time, CURTIME())) <= 2
-  `;
+  // 1. ตั้ง timezone ก่อน
+  connection.query("SET time_zone = '+07:00'", (err) => {
+    if (err) return res.status(500).json({ error: "Timezone set failed" });
 
-  connection.query(sql, [device_id], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(results);
+    // 2. Query จริงหลังตั้ง timezone
+    const sql = `
+      SELECT id, devices_id, repeat_type, date, amount,
+        TIME_FORMAT(time, '%H:%i') AS time
+      FROM feeding_schedules
+      WHERE devices_id = ?
+        AND (
+          repeat_type = 'daily'
+          OR (repeat_type = 'once' AND date = CURDATE())
+        )
+        AND ABS(TIMESTAMPDIFF(MINUTE, time, CURTIME())) <= 2
+    `;
+
+    connection.query(sql, [device_id], (err, results) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(results);
+    });
   });
 });
+
 
 
 //DELETE /feeding-schedules/:id → ลบตารางเวลาที่ไม่ต้องการ
