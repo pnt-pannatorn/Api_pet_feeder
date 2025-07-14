@@ -93,7 +93,7 @@ app.get("/devices-status-type", (req, res) => {
   const params = [line_uid];
 
   if (type) {
-    sql += " AND type = ?";
+    sql += " AND types = ?";
     params.push(type);
   }
 
