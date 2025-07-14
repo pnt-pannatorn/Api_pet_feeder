@@ -314,7 +314,7 @@ app.get("/feeding-schedules", (req, res) => {
         repeat_type = 'daily'
         OR (repeat_type = 'once' AND date = CURDATE())
       )
-      AND ABS(TIMESTAMPDIFF(MINUTE, time, NOW())) <= 1
+      AND ABS(TIMESTAMPDIFF(MINUTE, time, ADDTIME(NOW(), '07:00:00'))) <= 1
   `;
 
   connection.query(sql, [device_id], (err, results) => {
