@@ -314,7 +314,7 @@ app.get("/feeding-schedules", (req, res) => {
         repeat_type = 'daily'
         OR (repeat_type = 'once' AND date = CURDATE())
       )
-      AND ABS(TIMESTAMPDIFF(MINUTE, time, ADDTIME(NOW(), '07:00:00'))) <= 1
+      AND ABS(TIMESTAMPDIFF(MINUTE, time, CURTIME())) <= 2
   `;
 
   connection.query(sql, [device_id], (err, results) => {
@@ -322,6 +322,7 @@ app.get("/feeding-schedules", (req, res) => {
     res.json(results);
   });
 });
+
 
 //DELETE /feeding-schedules/:id → ลบตารางเวลาที่ไม่ต้องการ
 app.delete("/feeding-schedules/:id", (req, res) => {
